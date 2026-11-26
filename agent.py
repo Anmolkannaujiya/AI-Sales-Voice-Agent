@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import requests
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional
 from dotenv import load_dotenv
@@ -44,10 +45,13 @@ QUAL_FIELDS = [
 
 EMPTY = "Not provided"
 
-# ── Gemini check ──────────────────────────────────────────────────────────────
+# ── Groq check ────────────────────────────────────────────────────────────────
 
-def check_gemini_available() -> bool:
-    key = os.getenv("GEMINI_API_KEY", "").strip()
+def _get_groq_key() -> str:
+    return (os.getenv("GROQ_API_KEY") or os.getenv("GROK_API_KEY") or "").strip()
+
+def check_groq_available() -> bool:
+    key = _get_groq_key()
     return bool(key and not key.startswith("your_") and len(key) > 10)
 
 # ── FAQ lookup (keyword matching) ─────────────────────────────────────────────
@@ -111,7 +115,7 @@ def _extract_fields(text: str, lead: Dict) -> Dict:
     # Name
     if _is_empty(lead, "name"):
         m = re.search(
-            r"(?:my name is|i am|i'm|this is)\s+([A-Za-z]+(?:\s+(?!from\b|at\b|with\b|and\b)[A-Za-z]+)?)",
+            r"(?:my name is|i am|i'm|this is)\s+(?!work(?:ing)?\s+(?:at|for|as)\b|looking\b|trying\b|from\b|at\b|with\b)([A-Za-z]+(?:\s+(?!from\b|at\b|with\b|and\b|for\b)[A-Za-z]+)?)",
             text, re.IGNORECASE
         )
         if m:
@@ -120,7 +124,7 @@ def _extract_fields(text: str, lead: Dict) -> Dict:
     # Company
     if _is_empty(lead, "company"):
         m = re.search(
-            r"(?:from|work(?:ing)? at|at|company is|with)\s+([A-Za-z0-9&.\-\s]{2,30})",
+            r"(?:from|work(?:ing)?\s+(?:at|for)|at|company is|with)\s+([A-Za-z0-9&.\-\s]{2,30})",
             text, re.IGNORECASE
         )
         if m:
@@ -132,7 +136,7 @@ def _extract_fields(text: str, lead: Dict) -> Dict:
     if _is_empty(lead, "role"):
         m = re.search(
             r"(?:i(?:'m| am)(?: a| the| an)?|my role is|my title is|work(?:ing)? as(?: a| an)?)\s+"
-            r"([A-Za-z][A-Za-z\s]{2,40}?)(?:\s+at\b|\s+in\b|$|[,.])",
+            r"(?!work(?:ing)?\s+(?:at|for)\b|from\b|at\b|with\b)([A-Za-z][A-Za-z\s]{2,40}?)(?:\s+(?:at|for|in)\b|$|[,.])",
             text, re.IGNORECASE
         )
         if m:
@@ -284,13 +288,12 @@ def fallback_sales_engine(
         "offline_fallback",
     )
 
-# ── Gemini mode ───────────────────────────────────────────────────────────────
+# ── Groq mode ─────────────────────────────────────────────────────────────────
 
-def _gemini_reply(user_message: str, current_lead: Dict, faq_match: Optional[Dict], lang: str = "en-US") -> Dict:
-    from google import genai
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "openai/gpt-oss-20b"
 
-    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
+def _groq_reply(user_message: str, current_lead: Dict, faq_match: Optional[Dict], lang: str = "en-US") -> Dict:
     faq_context = (
         f"Relevant FAQ entry:\nQ: {faq_match['question']}\nA: {faq_match['answer']}"
         if faq_match
@@ -343,8 +346,22 @@ Respond with ONLY a valid JSON object (no markdown fences) with these keys:
 - "summary": string — 1-sentence lead summary based on what is known so far
 """
 
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-    raw = response.text.strip()
+    resp = requests.post(
+        GROQ_API_URL,
+        headers={
+            "Authorization": f"Bearer {_get_groq_key()}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": GROQ_MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+            "response_format": {"type": "json_object"},
+        },
+        timeout=20,
+    )
+    resp.raise_for_status()
+    raw = resp.json()["choices"][0]["message"]["content"].strip()
     raw = re.sub(r"^```(?:json)?\s*", "", raw)
     raw = re.sub(r"\s*```$", "", raw)
     return json.loads(raw)
@@ -356,7 +373,7 @@ def generate_sales_reply(user_message: str, lang: str = "en-US") -> Dict[str, An
     Returns:
       {
         "reply":       str,
-        "mode":        "gemini_ai" | "offline_fallback",
+        "mode":        "groq_ai" | "offline_fallback",
         "sentiment":   "positive" | "neutral" | "negative",
         "faq_matched": str | None,   # FAQ entry id, or None
         "lead":        dict
@@ -367,9 +384,10 @@ def generate_sales_reply(user_message: str, lang: str = "en-US") -> Dict[str, An
     faq_match = find_faq(user_message)
     faq_id = faq_match["id"] if faq_match else None
 
-    if check_gemini_available():
+    fallback_reason = None
+    if check_groq_available():
         try:
-            parsed = _gemini_reply(user_message, current_lead, faq_match, lang=lang)
+            parsed = _groq_reply(user_message, current_lead, faq_match, lang=lang)
 
             updated_lead = {
                 "name":     parsed.get("name")     or current_lead.get("name",     EMPTY),
@@ -389,7 +407,7 @@ def generate_sales_reply(user_message: str, lang: str = "en-US") -> Dict[str, An
                 database.book_appointment(
                     updated_lead["name"],
                     booked,
-                    "Booked via Gemini Agent",
+                    "Booked via Groq AI Agent",
                     lead_email=updated_lead.get("email", EMPTY),
                 )
                 updated_lead["status"] = "Qualified & Booked"
@@ -397,13 +415,14 @@ def generate_sales_reply(user_message: str, lang: str = "en-US") -> Dict[str, An
             lead_record = database.upsert_lead(updated_lead)
             return {
                 "reply": parsed.get("reply", "Thank you! How else can I help?"),
-                "mode": "gemini_ai",
+                "mode": "groq_ai",
                 "sentiment": sentiment,
                 "faq_matched": faq_id,
                 "lead": lead_record,
             }
         except Exception as exc:
-            print(f"[Agent] Gemini error — using fallback: {exc}")
+            fallback_reason = f"{type(exc).__name__}: {str(exc)[:180]}"
+            print(f"[Agent] Groq error — using fallback: {exc}")
 
     # Offline fallback
     reply_text, updated_lead, mode = fallback_sales_engine(user_message, current_lead, faq_match)
@@ -417,6 +436,7 @@ def generate_sales_reply(user_message: str, lang: str = "en-US") -> Dict[str, An
     return {
         "reply": reply_text,
         "mode": mode,
+        "fallback_reason": fallback_reason,
         "sentiment": sentiment,
         "faq_matched": faq_id,
         "lead": lead_record,
@@ -432,10 +452,8 @@ def generate_call_summary() -> Dict[str, Any]:
 
     apt_text = f"Appointment booked for {appointments[0]['slot']}." if appointments else "No appointment booked yet."
 
-    if check_gemini_available() and transcript:
+    if check_groq_available() and transcript:
         try:
-            from google import genai
-            client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
             prompt = (
                 "Write a concise 2-sentence sales call summary based ONLY on this CRM state, "
                 "appointment status, and transcript. Do not invent any details.\n\n"
@@ -444,8 +462,21 @@ def generate_call_summary() -> Dict[str, Any]:
                 f"Sentiment (basic estimate): {sentiment}\n"
                 f"Transcript:\n{transcript}"
             )
-            resp = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-            summary_text = resp.text.strip()
+            resp = requests.post(
+                GROQ_API_URL,
+                headers={
+                    "Authorization": f"Bearer {_get_groq_key()}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": GROQ_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.2,
+                },
+                timeout=20,
+            )
+            resp.raise_for_status()
+            summary_text = resp.json()["choices"][0]["message"]["content"].strip()
         except Exception:
             summary_text = (_build_summary(lead) + f" Sentiment: {sentiment} (basic estimate). {apt_text}").strip()
     else:

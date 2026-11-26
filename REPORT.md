@@ -23,7 +23,7 @@ flowchart LR
     UI -->|"POST /api/chat, /api/book, /api/summary"| API["FastAPI Backend (main.py)"]
     API --> AG["Sales Agent (agent.py)"]
     AG -->|"Keyword Match"| FAQ["Local FAQ (faq.json)"]
-    AG -->|"If GEMINI_API_KEY Set"| GEM["Gemini API (Optional)"]
+    AG -->|"If GROQ_API_KEY Set"| GROQ["Groq API (Optional)"]
     AG -->|"Fallback Engine"| FB["Rule-Based Dialog & Sentiment"]
     API --> DB["SQLite (sales_agent.db)"]
 ```
@@ -35,7 +35,7 @@ flowchart LR
 | Component | Status in MVP | Notes |
 |---|---|---|
 | Voice Input & Spoken Replies | **Implemented (Browser)** | Uses Web Speech API (`SpeechRecognition` & `speechSynthesis`) in English/Hindi with text fallback. |
-| Lead Qualification & FAQ Retrieval | **Implemented (Local)** | Tracks 7 fields one-by-one; matches `faq.json` via keyword scoring; optional Gemini phrasing. |
+| Lead Qualification & FAQ Retrieval | **Implemented (Local)** | Tracks 7 fields one-by-one; matches `faq.json` via keyword scoring; optional Groq phrasing. |
 | Sentiment Label & Call Summary | **Implemented (Basic)** | Keyword-rule sentiment estimate and concise summary generation. |
 | CRM Record & Transcript Storage | **Simulated (Local SQLite)** | Stored in local `sales_agent.db` (`leads`, `messages`, `appointments` tables). |
 | Calendar / Appointment Booking | **Simulated (Local SQLite)** | Saves name, email, and chosen date/time locally without Google/Outlook Calendar APIs. |
@@ -44,7 +44,7 @@ flowchart LR
 ---
 
 ## 5. Security & Privacy Choices
-- **No Hardcoded Secrets**: `GEMINI_API_KEY` is read from environment variables / `.env` (with `.env.example` left blank).
+- **No Hardcoded Secrets**: `GROQ_API_KEY` is read from environment variables / `.env` (with `.env.example` left blank).
 - **No Audio Upload or Storage**: Speech recognition runs locally in the user's browser; only transcribed text is sent to the FastAPI backend.
 - **Grounded Responses**: Product answers are constrained to `faq.json` so the agent does not invent product claims.
 - **HTML Escaping**: User and agent messages are escaped in the frontend before rendering to prevent XSS.

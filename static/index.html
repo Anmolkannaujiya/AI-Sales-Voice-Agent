@@ -624,7 +624,7 @@
       const data = await res.json();
       appendMessage('assistant', data.reply, data.faq_matched);
       speak(data.reply);
-      updateBadges(data.mode, data.sentiment, data.faq_matched);
+      updateBadges(data.mode, data.sentiment, data.faq_matched, data.fallback_reason);
       if (data.lead)         updateCRM(data.lead);
       if (data.appointments) updateApts(data.appointments);
     } catch(err) {
@@ -675,12 +675,15 @@
   }
 
   // ── Update header badges ──────────────────────────────────────────
-  function updateBadges(mode, sentiment, faqId) {
+  function updateBadges(mode, sentiment, faqId, fallbackReason) {
     const eb = document.getElementById('engineBadge');
-    if (mode === 'gemini_ai') {
-      eb.className = 'badge badge-gemini'; eb.textContent = '✦ Gemini AI';
+    if (mode === 'groq_ai') {
+      eb.className = 'badge badge-gemini'; eb.textContent = '✦ Groq AI';
+      eb.title = 'Connected to Groq AI';
     } else {
       eb.className = 'badge badge-offline'; eb.textContent = '⚙ Offline Fallback';
+      eb.title = fallbackReason || 'Running offline rule-based fallback';
+      if (fallbackReason) console.warn('Groq fallback reason:', fallbackReason);
     }
 
     const sb = document.getElementById('sentimentBadge');
@@ -795,7 +798,7 @@
       const r = await fetch('/api/crm');
       const d = await r.json();
       const sent = (d.lead && d.lead.sentiment) ? d.lead.sentiment : 'neutral';
-      updateBadges(d.gemini_active ? 'gemini_ai' : 'offline_fallback', sent, null);
+      updateBadges(d.groq_active ? 'groq_ai' : 'offline_fallback', sent, null);
       if (d.lead)         updateCRM(d.lead);
       if (d.appointments) updateApts(d.appointments);
     } catch(e) { console.warn(e); }

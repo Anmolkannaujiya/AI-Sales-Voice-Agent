@@ -7,7 +7,7 @@ A simple, beginner-friendly Autonomous AI Sales Voice Agent built with **FastAPI
 ## Features
 - **Voice & Text Chat**: Speak in **English (`en-US`)** or **Hindi (`hi-IN`)** via the browser's Web Speech API (`SpeechRecognition` + `speechSynthesis`), or use the text box and **Send** button anytime as a fallback. No audio is uploaded or stored.
 - **7-Field Lead Qualification**: Tracks `name`, `company`, `role`, `need`, `budget`, `timeline`, and `email` one question at a time.
-- **Local FAQ Retrieval**: Matches product questions against `faq.json` using keyword matching. Uses Gemini for phrasing only if `GEMINI_API_KEY` is set; otherwise uses a rule-based fallback.
+- **Local FAQ Retrieval**: Matches product questions against `faq.json` using keyword matching. Uses Groq for phrasing only if `GROQ_API_KEY` is set; otherwise uses a rule-based fallback.
 - **Basic Sentiment Estimate**: Tags user messages as `positive`, `neutral`, or `negative` using keyword rules (labeled as a basic estimate).
 - **Mock Appointment & CRM**: Saves mock appointments (`lead_name`, `lead_email`, and chosen date/time), conversation transcript, and a short call summary to local SQLite (`sales_agent.db`).
 
@@ -27,11 +27,11 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-### 3. (Optional) Configure Gemini API Key
+### 3. (Optional) Configure Groq API Key
 ```powershell
 Copy-Item .env.example .env
 ```
-Open `.env` and set `GEMINI_API_KEY=your_key_here`. If left blank, the app runs offline using the built-in rule-based fallback.
+Open `.env` and set `GROQ_API_KEY=your_key_here`. If left blank, the app runs offline using the built-in rule-based fallback.
 
 ### 4. Start the App
 ```powershell
@@ -43,7 +43,7 @@ Open **http://localhost:8000** in Chrome or Edge (health check: **http://localho
 
 ## 5-Minute Presentation Demo Script
 
-1. **Show the Status Badges**: Point out the **Offline Fallback** (or **Gemini AI**) badge in the top bar and the **English / Hindi** language selector.
+1. **Show the Status Badges**: Point out the **Offline Fallback** (or **Groq AI**) badge in the top bar and the **English / Hindi** language selector.
 2. **Test Voice or Text Input**:
    - Click the **🎤** button and say *"Hi, what does FortiVex cost?"* (or click the **Pricing** FAQ chip / type it).
    - Point out the spoken TTS reply, the **`📖 FAQ: pricing`** badge, and the **Sentiment (est.)** update.

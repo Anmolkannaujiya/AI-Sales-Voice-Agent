@@ -31,7 +31,7 @@ def on_startup():
 def health_check():
     return {
         "status": "ok",
-        "gemini_active": agent.check_gemini_available(),
+        "groq_active": agent.check_groq_available(),
         "database": "sqlite3",
         "service": "FortiVex Sales Voice Agent"
     }
@@ -63,6 +63,7 @@ def chat_endpoint(payload: ChatRequest):
     return {
         "reply": reply_text,
         "mode": mode,
+        "fallback_reason": result.get("fallback_reason"),
         "sentiment": result.get("sentiment", "neutral"),
         "faq_matched": result.get("faq_matched"),
         "lead": lead,
@@ -117,7 +118,7 @@ def summary_endpoint():
 @app.get("/api/crm")
 def get_crm_data():
     return {
-        "gemini_active": agent.check_gemini_available(),
+        "groq_active": agent.check_groq_available(),
         "lead": database.get_latest_lead() or {
             "name": "Not provided",
             "company": "Not provided",
