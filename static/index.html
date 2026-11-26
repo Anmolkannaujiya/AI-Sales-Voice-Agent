@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FortiVex | Autonomous AI Sales Voice Agent</title>
+  <style>
+    :root {
+      --bg:          #0f172a;
+      --card:        #1e293b;
+      --border:      #334155;
+      --text:        #f8fafc;
+      --muted:       #94a3b8;
+      --accent:      #38bdf8;
+      --accent-h:    #0284c7;
+      --success:     #10b981;
+      --warning:     #f59e0b;
+      --danger:      #ef4444;
+      --user-msg:    #2563eb;
+      --agent-msg:   #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+    body { background: var(--bg); color: var(--text);
+           min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    header {
+      padding: .9rem 2rem;
+      background: rgba(30,41,59,.88);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .brand { display: flex; align-items: center; gap: .75rem; }
+    .brand h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; }
+    .brand h1 span { color: var(--accent); }
+    .brand p { font-size: .72rem; color: var(--muted); }
+
+    .header-right { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+
+    .badge {
+      font-size: .72rem; font-weight: 600;
+      padding: .3rem .7rem; border-radius: 9999px;
+      display: inline-flex; align-items: center; gap: .35rem;
+    }
+    .badge-offline { background: rgba(245,158,11,.12); color: var(--warning); border: 1px solid rgba(245,158,11,.3); }
+    .badge-gemini  { background: rgba(16,185,129,.12);  color: var(--success);  border: 1px solid rgba(16,185,129,.3); }
+
+    /* sentiment badges */
+    .sent-positive { background: rgba(16,185,129,.12); color: var(--success); border: 1px solid rgba(16,185,129,.3); }
+    .sent-negative { background: rgba(239,68,68,.12);  color: var(--danger);   border: 1px solid rgba(239,68,68,.3); }
+    .sent-neutral  { background: rgba(148,163,184,.1); color: var(--muted);    border: 1px solid rgba(148,163,184,.2); }
+
+    .btn-reset {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); padding: .3rem .8rem;
+      border-radius: 6px; font-size: .78rem; cursor: pointer; transition: all .2s;
+    }
+    .btn-reset:hover { background: #334155; color: var(--text); }
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+    .container {
+      flex: 1; display: grid; grid-template-columns: 1.3fr 1fr;
+      gap: 1.25rem; padding: 1.25rem 2rem;
+      max-width: 1440px; width: 100%; margin: 0 auto;
+    }
+    @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+
+    /* ── Chat panel ──────────────────────────────────────────────────── */
+    .chat-section {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; display: flex; flex-direction: column;
+      overflow: hidden; height: calc(100vh - 112px);
+    }
+    .chat-header {
+      padding: .9rem 1.25rem; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap;
+    }
+    .chat-header h2 { font-size: .95rem; font-weight: 600; }
+    .chat-controls { display: flex; align-items: center; gap: .85rem; }
+    .lang-select {
+      background: #0f172a; color: var(--text); border: 1px solid var(--border);
+      border-radius: 6px; padding: .28rem .55rem; font-size: .78rem; cursor: pointer; outline: none;
+    }
+    .lang-select:focus { border-color: var(--accent); }
+    .tts-toggle { display: flex; align-items: center; gap: .4rem;
+                  font-size: .78rem; color: var(--muted); cursor: pointer; }
+    .tts-toggle input { accent-color: var(--accent); cursor: pointer; }
+
+    .voice-status {
+      display: none;
+      padding: .45rem 1.1rem;
+      font-size: .78rem;
+      border-top: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.75);
+      color: var(--muted);
+    }
+    .voice-status.visible { display: block; }
+    .voice-status.error {
+      background: rgba(239, 68, 68, 0.14);
+      color: #fca5a5;
+      border-top-color: rgba(239, 68, 68, 0.35);
+    }
+    .voice-status.listening {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      border-top-color: rgba(56, 189, 248, 0.3);
+    }
+
+    .chat-messages {
+      flex: 1; padding: 1.1rem; overflow-y: auto;
+      display: flex; flex-direction: column; gap: .9rem;
+    }
+    .message {
+      max-width: 83%; padding: .75rem 1rem; border-radius: 12px;
+      font-size: .88rem; line-height: 1.45; word-wrap: break-word;
+    }
+    .message.user     { align-self: flex-end; background: var(--user-msg);
+                        color: #fff; border-bottom-right-radius: 3px; }
+    .message.assistant{ align-self: flex-start; background: var(--agent-msg);
+                        color: var(--text); border-bottom-left-radius: 3px;
+                        border: 1px solid var(--border); }
+    .message-meta { font-size: .68rem; opacity: .6; margin-top: .3rem; }
+    .message.user .message-meta { text-align: right; }
+
+    /* FAQ-match chip inside message */
+    .faq-tag {
+      display: inline-block; margin-top: .4rem;
+      font-size: .65rem; padding: .15rem .45rem; border-radius: 10px;
+      background: rgba(56,189,248,.12); color: var(--accent);
+      border: 1px solid rgba(56,189,248,.25);
+    }
+
+    /* Quick FAQ chips */
+    .faq-chips {
+      padding: .45rem 1.1rem; display: flex; flex-wrap: wrap; gap: .4rem;
+      border-top: 1px solid var(--border); background: rgba(15,23,42,.4);
+    }
+    .chip {
+      background: #1e293b; border: 1px solid #475569;
+      color: var(--accent); padding: .22rem .6rem;
+      border-radius: 14px; font-size: .72rem; cursor: pointer; transition: background .15s;
+    }
+    .chip:hover { background: #334155; }
+
+    /* Input bar */
+    .chat-input-bar {
+      padding: .9rem 1.1rem; border-top: 1px solid var(--border);
+      display: flex; gap: .6rem; align-items: center;
+    }
+    .chat-input-bar input {
+      flex: 1; background: #0f172a; border: 1px solid var(--border);
+      border-radius: 8px; padding: .7rem .95rem; color: var(--text);
+      font-size: .88rem; outline: none;
+    }
+    .chat-input-bar input:focus { border-color: var(--accent); }
+    .btn-send {
+      background: var(--accent); color: #0f172a; border: none;
+      padding: .7rem 1.15rem; border-radius: 8px; font-weight: 600;
+      font-size: .88rem; cursor: pointer; transition: background .2s;
+    }
+    .btn-send:hover { background: var(--accent-h); }
+    .btn-mic {
+      background: #334155; color: var(--text); border: 1px solid var(--border);
+      width: 42px; height: 42px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 1.1rem; transition: all .2s;
+    }
+    .btn-mic.listening {
+      background: var(--danger); color: #fff; animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+      0%   { transform:scale(1);    box-shadow:0 0 0 0   rgba(239,68,68,.7); }
+      70%  { transform:scale(1.08); box-shadow:0 0 0 10px rgba(239,68,68,0); }
+      100% { transform:scale(1);    box-shadow:0 0 0 0   rgba(239,68,68,0); }
+    }
+
+    /* ── Dashboard column ────────────────────────────────────────────── */
+    .dashboard-section {
+      display: flex; flex-direction: column; gap: 1.1rem;
+      overflow-y: auto; height: calc(100vh - 112px);
+    }
+
+    .panel {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.1rem;
+    }
+    .panel-title {
+      font-size: .9rem; font-weight: 600; color: var(--accent);
+      margin-bottom: .75rem; display: flex; justify-content: space-between; align-items: center;
+    }
+    .panel-title span.sub { font-size: .72rem; color: var(--muted); font-weight: 400; }
+
+    /* Lead field grid */
+    .crm-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: .6rem;
+    }
+    .crm-item {
+      background: rgba(15,23,42,.6); padding: .55rem .75rem;
+      border-radius: 6px; border: 1px solid rgba(255,255,255,.05);
+      transition: border-color .2s;
+    }
+    .crm-item.filled { border-color: rgba(16,185,129,.35); }
+    .crm-item label {
+      display: block; font-size: .67rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .04em; margin-bottom: .2rem;
+    }
+    .crm-item .val {
+      font-size: .82rem; font-weight: 600; color: var(--text);
+      word-break: break-word;
+    }
+    .crm-item .val.empty { color: var(--muted); font-weight: 400; font-style: italic; }
+    .span2 { grid-column: span 2; }
+
+    /* Qualification progress bar */
+    .qual-bar-wrap { margin: .6rem 0 .2rem; }
+    .qual-bar-label { font-size: .7rem; color: var(--muted); margin-bottom: .3rem;
+                      display: flex; justify-content: space-between; }
+    .qual-bar { height: 6px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden; }
+    .qual-bar-fill { height: 100%; border-radius: 3px; background: var(--accent);
+                     transition: width .4s ease; }
+
+    .summary-box {
+      margin-top: .8rem; background: rgba(15,23,42,.6);
+      border-left: 3px solid var(--accent); padding: .65rem .9rem;
+      border-radius: 4px; font-size: .82rem; color: #cbd5e1; line-height: 1.4;
+    }
+
+    /* Slots */
+    .slots-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+    .slot-btn {
+      background: #0f172a; border: 1px solid #334155;
+      color: var(--text); padding: .6rem; border-radius: 6px;
+      font-size: .78rem; cursor: pointer; text-align: center; transition: all .15s;
+    }
+    .slot-btn:hover { border-color: var(--accent); background: #1e293b; color: var(--accent); }
+
+    .apt-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .45rem .7rem; margin-top: .45rem;
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.22);
+      border-radius: 6px; font-size: .78rem;
+    }
+    .apt-item .apt-slot { font-weight: 600; }
+    .apt-item .apt-lead { font-size: .68rem; color: var(--muted); }
+
+    .book-form {
+      display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; margin-bottom: .75rem;
+    }
+    .book-form input {
+      background: #0f172a; border: 1px solid var(--border); border-radius: 6px;
+      padding: .48rem .65rem; color: var(--text); font-size: .78rem; outline: none;
+    }
+    .book-form input:focus { border-color: var(--accent); }
+    .btn-book {
+      background: var(--success); color: #052e16; border: none; border-radius: 6px;
+      padding: .52rem .9rem; font-size: .8rem; font-weight: 600; cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn-book:hover { opacity: .9; }
+    .btn-mini {
+      background: transparent; border: 1px solid var(--border); color: var(--accent);
+      padding: .18rem .5rem; border-radius: 5px; font-size: .68rem; cursor: pointer;
+    }
+    .btn-mini:hover { background: #334155; }
+    .transcript-box {
+      margin-top: .4rem; max-height: 95px; overflow-y: auto;
+      background: rgba(15,23,42,.6); border: 1px solid rgba(255,255,255,.06);
+      border-radius: 4px; padding: .5rem .7rem; font-size: .72rem;
+      color: var(--muted); white-space: pre-wrap; line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div style="font-size:1.45rem">🎙️</div>
+    <div>
+      <h1>Forti<span>Vex</span></h1>
+      <p>Autonomous AI Sales Voice Agent</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="engineBadge" class="badge badge-offline">⚙ Offline Fallback</div>
+    <div id="sentimentBadge" class="badge sent-neutral">😐 Neutral (est.)</div>
+    <div id="faqBadge" class="badge" style="display:none; background:rgba(56,189,248,.1); color:var(--accent); border:1px solid rgba(56,189,248,.25);">📖 FAQ match</div>
+    <button class="btn-reset" onclick="resetDemo()">↺ Reset Demo</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- ── Left: Chat ─────────────────────────────────────────────────── -->
+  <section class="chat-section">
+    <div class="chat-header">
+      <h2>Live Conversation</h2>
+      <div class="chat-controls">
+        <select id="langSelect" class="lang-select" title="Speech & Voice Language" onchange="onLanguageChange()">
+          <option value="en-US">English (en-US)</option>
+          <option value="hi-IN">Hindi (hi-IN)</option>
+        </select>
+        <label class="tts-toggle">
+          <input type="checkbox" id="ttsCheckbox" checked />
+          <span>Voice Output</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="message assistant">
+        Hello! Welcome to FortiVex — I'm your AI sales representative. May I start with your name?
+        <div class="message-meta">Agent • Just now</div>
+      </div>
+    </div>
+
+    <!-- Quick FAQ buttons -->
+    <div class="faq-chips">
+      <span style="font-size:.72rem;color:var(--muted);align-self:center">Ask FAQ:</span>
+      <button class="chip" onclick="sq('What does FortiVex do?')">Product Features</button>
+      <button class="chip" onclick="sq('How much does it cost?')">Pricing</button>
+      <button class="chip" onclick="sq('What integrations do you support?')">Integrations</button>
+      <button class="chip" onclick="sq('Is it secure and compliant?')">Security</button>
+      <button class="chip" onclick="sq('Is there a free trial?')">Free Trial</button>
+      <button class="chip" onclick="sq('What languages do you support?')">Languages</button>
+      <button class="chip" onclick="sq('Can we schedule a demo?')">Book Demo</button>
+    </div>
+
+    <!-- Voice status / permission notice -->
+    <div id="voiceStatus" class="voice-status" role="status" aria-live="polite"></div>
+
+    <!-- Input bar -->
+    <div class="chat-input-bar">
+      <button id="micBtn" class="btn-mic" title="Click to speak" onclick="toggleVoice()">🎤</button>
+      <input type="text" id="userInput"
+             placeholder="Speak or type your message…"
+             onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button class="btn-send" onclick="sendMessage()">Send</button>
+    </div>
+  </section>
+
+  <!-- ── Right: CRM Dashboard ──────────────────────────────────────── -->
+  <section class="dashboard-section">
+
+    <!-- Lead Qualification Card -->
+    <div class="panel">
+      <div class="panel-title">
+        Lead Qualification (CRM)
+        <span id="leadStatusBadge" class="sub">In Progress</span>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="qual-bar-wrap">
+        <div class="qual-bar-label">
+          <span>Qualification Progress</span>
+          <span id="qualCount">0 / 7 fields</span>
+        </div>
+        <div class="qual-bar"><div class="qual-bar-fill" id="qualFill" style="width:0%"></div></div>
+      </div>
+
+      <div class="crm-grid" style="margin-top:.6rem">
+        <div class="crm-item" id="f-name">
+          <label>Name</label>
+          <div class="val empty" id="v-name">Not provided</div>
+        </div>
+        <div class="crm-item" id="f-company">
+          <label>Company</label>
+          <div class="val empty" id="v-company">Not provided</div>
+        </div>
+        <div class="crm-item" id="f-role">
+          <label>Role / Title</label>
+          <div class="val empty" id="v-role">Not provided</div>
+        </div>
+        <div class="crm-item" id="f-email">
+          <label>Email</label>
+          <div class="val empty" id="v-email">Not provided</div>
+        </div>
+        <div class="crm-item span2" id="f-need">
+          <label>Business Need / Goal</label>
+          <div class="val empty" id="v-need">Not provided</div>
+        </div>
+        <div class="crm-item" id="f-budget">
+          <label>Budget</label>
+          <div class="val empty" id="v-budget">Not provided</div>
+        </div>
+        <div class="crm-item" id="f-timeline">
+          <label>Timeline</label>
+          <div class="val empty" id="v-timeline">Not provided</div>
+        </div>
+        <div class="crm-item" id="f-sentiment">
+          <label>Sentiment (Basic Est.)</label>
+          <div class="val" id="v-sentiment">😐 Neutral</div>
+        </div>
+        <div class="crm-item" id="f-apt-status">
+          <label>Appointment Status</label>
+          <div class="val empty" id="v-apt-status">Not booked</div>
+        </div>
+      </div>
+
+      <div style="margin-top:.8rem">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <label style="font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">
+            Call Summary
+          </label>
+          <button class="btn-mini" onclick="generateSummary()">Generate Summary</button>
+        </div>
+        <div class="summary-box" id="crmSummary">
+          Conversation initiated. Gathering prospect background.
+        </div>
+      </div>
+
+      <div style="margin-top:.75rem">
+        <label style="font-size:.67rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">
+          Saved CRM Transcript (SQLite)
+        </label>
+        <div class="transcript-box" id="crmTranscript">No messages saved yet.</div>
+      </div>
+    </div>
+
+    <!-- Booking Panel -->
+    <div class="panel">
+      <div class="panel-title">
+        Mock Appointment Booking
+        <span class="sub">Simulated local calendar</span>
+      </div>
+      <div class="book-form">
+        <input type="text" id="bookName" placeholder="Lead name" />
+        <input type="email" id="bookEmail" placeholder="Lead email" />
+        <input type="datetime-local" id="bookDateTime" class="span2" />
+        <button class="btn-book span2" onclick="bookCustomAppointment()">📅 Book Appointment</button>
+      </div>
+      <div style="font-size:.7rem;color:var(--muted);margin-bottom:.4rem">Or click a quick demo slot:</div>
+      <div class="slots-grid">
+        <button class="slot-btn" onclick="bookSlot('Tomorrow at 10:00 AM')">Tomorrow 10:00 AM</button>
+        <button class="slot-btn" onclick="bookSlot('Tomorrow at 2:30 PM')">Tomorrow 2:30 PM</button>
+        <button class="slot-btn" onclick="bookSlot('Friday at 11:00 AM')">Friday 11:00 AM</button>
+        <button class="slot-btn" onclick="bookSlot('Monday at 4:00 PM')">Monday 4:00 PM</button>
+      </div>
+
+      <div style="margin-top:.9rem">
+        <div class="panel-title" style="font-size:.82rem;margin-bottom:.35rem">
+          Confirmed Appointments
+        </div>
+        <div id="appointmentsList" style="font-size:.78rem;color:var(--muted)">
+          No appointments booked yet.
+        </div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<script>
+  // ── Language & Voice Status Helpers ───────────────────────────────
+  function getSelectedLang() {
+    return document.getElementById('langSelect').value || 'en-US';
+  }
+  function showVoiceStatus(msg, type) {
+    const el = document.getElementById('voiceStatus');
+    el.textContent = msg;
+    el.className = 'voice-status visible' + (type ? ' ' + type : '');
+  }
+  function clearVoiceStatus() {
+    const el = document.getElementById('voiceStatus');
+    el.textContent = '';
+    el.className = 'voice-status';
+  }
+  function onLanguageChange() {
+    const lang = getSelectedLang();
+    if (recognition) recognition.lang = lang;
+    if (isListening && recognition) {
+      recognition.stop();
+      stopVoice();
+    }
+  }
+
+  // ── Voice recognition (browser-only, no audio uploaded/stored) ─────
+  let isListening = false;
+  let recognition = null;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = getSelectedLang();
+
+    recognition.onstart = () => {
+      isListening = true;
+      micBtn('🛑', true);
+      const langLabel = getSelectedLang() === 'hi-IN' ? 'Hindi' : 'English';
+      showVoiceStatus(`Listening in ${langLabel}... Speak now (or type below).`, 'listening');
+    };
+
+    recognition.onresult = e => {
+      clearVoiceStatus();
+      const transcript = e.results[0][0].transcript;
+      document.getElementById('userInput').value = transcript;
+      sendMessage();
+    };
+
+    recognition.onerror = e => {
+      stopVoice();
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        showVoiceStatus(
+          'Microphone permission denied. Please allow mic access in browser settings or use the text box below.',
+          'error'
+        );
+      } else if (e.error === 'no-speech') {
+        showVoiceStatus('No speech detected. Try speaking again or type your message below.', 'error');
+      } else if (e.error === 'audio-capture') {
+        showVoiceStatus('No microphone found. Please use the text box below to type.', 'error');
+      } else if (e.error === 'network') {
+        showVoiceStatus('Speech recognition network error. Please use the text box below.', 'error');
+      } else {
+        showVoiceStatus(`Voice recognition error (${e.error}). Please type your message below.`, 'error');
+      }
+    };
+
+    recognition.onend = () => {
+      stopVoice();
+    };
+  } else {
+    window.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('micBtn');
+      btn.disabled = true;
+      btn.style.opacity = '0.45';
+      btn.style.cursor = 'not-allowed';
+      btn.title = 'Speech recognition not supported in this browser';
+      showVoiceStatus(
+        'Microphone speech recognition is not supported in this browser. Use the text box below to chat.',
+        'error'
+      );
+    });
+  }
+
+  function toggleVoice() {
+    if (!recognition) {
+      showVoiceStatus(
+        'Microphone speech recognition is not supported in this browser. Please type below.',
+        'error'
+      );
+      return;
+    }
+    if (isListening) {
+      recognition.stop();
+      stopVoice();
+      clearVoiceStatus();
+    } else {
+      clearVoiceStatus();
+      recognition.lang = getSelectedLang();
+      try {
+        recognition.start();
+      } catch (e) {
+        stopVoice();
+        showVoiceStatus('Could not start microphone. Please use the text box below.', 'error');
+      }
+    }
+  }
+  function stopVoice() {
+    isListening = false;
+    micBtn('🎤', false);
+    const el = document.getElementById('voiceStatus');
+    if (el.classList.contains('listening')) {
+      clearVoiceStatus();
+    }
+  }
+  function micBtn(icon, on) {
+    const b = document.getElementById('micBtn');
+    b.textContent = icon;
+    on ? b.classList.add('listening') : b.classList.remove('listening');
+  }
+
+  // ── TTS (Speech Synthesis) ─────────────────────────────────────────
+  function speak(text) {
+    if (!document.getElementById('ttsCheckbox').checked || !window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const lang = getSelectedLang();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    utter.rate = 1.0;
+    utter.pitch = 1.0;
+    const voices = speechSynthesis.getVoices();
+    const match = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(lang.split('-')[0].toLowerCase()));
+    if (match) utter.voice = match;
+    speechSynthesis.speak(utter);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────
+  function esc(t) { const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+  function sq(text) { document.getElementById('userInput').value=text; sendMessage(); }
+  const EMPTY = 'Not provided';
+
+  // ── Append message bubble ──────────────────────────────────────────
+  function appendMessage(role, text, faqId) {
+    const c = document.getElementById('chatMessages');
+    const d = document.createElement('div');
+    d.className = `message ${role}`;
+    const t = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    let extra = '';
+    if (faqId && role === 'assistant') {
+      extra = `<div><span class="faq-tag">📖 FAQ: ${esc(faqId)}</span></div>`;
+    }
+    d.innerHTML = `${esc(text)}${extra}<div class="message-meta">${role==='user'?'You':'Agent'} • ${t}</div>`;
+    c.appendChild(d);
+    c.scrollTop = c.scrollHeight;
+  }
+
+  // ── Send message ──────────────────────────────────────────────────
+  async function sendMessage() {
+    const inp = document.getElementById('userInput');
+    const text = inp.value.trim();
+    if (!text) return;
+    inp.value = '';
+    appendMessage('user', text, null);
+
+    try {
+      const res  = await fetch('/api/chat', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({message: text, lang: getSelectedLang()})
+      });
+      const data = await res.json();
+      appendMessage('assistant', data.reply, data.faq_matched);
+      speak(data.reply);
+      updateBadges(data.mode, data.sentiment, data.faq_matched);
+      if (data.lead)         updateCRM(data.lead);
+      if (data.appointments) updateApts(data.appointments);
+    } catch(err) {
+      console.error(err);
+      appendMessage('assistant', 'Sorry — a temporary connection issue. Please try again.', null);
+    }
+  }
+
+  // ── Book slot / custom appointment ────────────────────────────────
+  async function bookSlot(slot, customName, customEmail) {
+    const nameVal  = (customName  !== undefined ? customName  : document.getElementById('bookName').value).trim();
+    const emailVal = (customEmail !== undefined ? customEmail : document.getElementById('bookEmail').value).trim();
+    try {
+      const res  = await fetch('/api/book', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          slot,
+          name: nameVal || null,
+          email: emailVal || null,
+          notes: 'Mock appointment booked'
+        })
+      });
+      const data = await res.json();
+      appendMessage('assistant', `✅ Mock appointment booked for ${slot}!`, null);
+      speak(`Your appointment for ${slot} has been booked!`);
+      if (data.lead)         updateCRM(data.lead);
+      if (data.appointments) updateApts(data.appointments);
+    } catch(err) { console.error(err); }
+  }
+
+  function bookCustomAppointment() {
+    const dtInput = document.getElementById('bookDateTime').value;
+    if (!dtInput) {
+      alert('Please choose a date and time (or click one of the quick demo slots).');
+      return;
+    }
+    const formatted = dtInput.replace('T', ' at ');
+    bookSlot(formatted);
+  }
+
+  // ── Generate short call summary ────────────────────────────────────
+  async function generateSummary() {
+    try {
+      const res  = await fetch('/api/summary', { method: 'POST' });
+      const data = await res.json();
+      if (data.lead) updateCRM(data.lead);
+    } catch(err) { console.error(err); }
+  }
+
+  // ── Update header badges ──────────────────────────────────────────
+  function updateBadges(mode, sentiment, faqId) {
+    const eb = document.getElementById('engineBadge');
+    if (mode === 'gemini_ai') {
+      eb.className = 'badge badge-gemini'; eb.textContent = '✦ Gemini AI';
+    } else {
+      eb.className = 'badge badge-offline'; eb.textContent = '⚙ Offline Fallback';
+    }
+
+    const sb = document.getElementById('sentimentBadge');
+    const icons = {positive:'😊', neutral:'😐', negative:'😟'};
+    const labels = {positive:'Positive', neutral:'Neutral', negative:'Negative'};
+    sb.className = `badge sent-${sentiment}`;
+    sb.textContent = `${icons[sentiment]||'😐'} ${labels[sentiment]||'Neutral'} (est.)`;
+
+    const fb = document.getElementById('faqBadge');
+    if (faqId) {
+      fb.style.display = 'inline-flex';
+      fb.textContent = `📖 FAQ: ${faqId}`;
+    } else {
+      fb.style.display = 'none';
+    }
+  }
+
+  // ── Update CRM panel ──────────────────────────────────────────────
+  const FIELDS = ['name','company','role','email','need','budget','timeline'];
+
+  function updateCRM(lead) {
+    let filled = 0;
+    FIELDS.forEach(k => {
+      const val = lead[k];
+      const isFilled = val && val !== EMPTY;
+      if (isFilled) filled++;
+      const vEl = document.getElementById(`v-${k}`);
+      const fEl = document.getElementById(`f-${k}`);
+      if (!vEl) return;
+      vEl.textContent = isFilled ? val : EMPTY;
+      vEl.className   = isFilled ? 'val' : 'val empty';
+      fEl.classList.toggle('filled', isFilled);
+    });
+
+    // Progress bar
+    const pct = Math.round(filled / FIELDS.length * 100);
+    document.getElementById('qualFill').style.width = pct + '%';
+    document.getElementById('qualCount').textContent = `${filled} / ${FIELDS.length} fields`;
+
+    // Status badge
+    const sb = document.getElementById('leadStatusBadge');
+    sb.textContent = lead.status || 'In Progress';
+    if ((lead.status||'').includes('Booked'))   sb.style.color = 'var(--success)';
+    else if ((lead.status||'').includes('Qual')) sb.style.color = 'var(--accent)';
+    else                                          sb.style.color = 'var(--warning)';
+
+    // Summary
+    document.getElementById('crmSummary').textContent =
+      lead.summary || 'Awaiting further conversation.';
+
+    // Sentiment inside CRM card
+    const sent = lead.sentiment || 'neutral';
+    const sentIcons = {positive:'😊 Positive', neutral:'😐 Neutral', negative:'😟 Negative'};
+    const vSent = document.getElementById('v-sentiment');
+    if (vSent) vSent.textContent = sentIcons[sent] || '😐 Neutral';
+
+    // Pre-fill booking inputs if empty
+    const bName  = document.getElementById('bookName');
+    const bEmail = document.getElementById('bookEmail');
+    if (bName && !bName.value && lead.name && lead.name !== EMPTY) bName.value = lead.name;
+    if (bEmail && !bEmail.value && lead.email && lead.email !== EMPTY) bEmail.value = lead.email;
+
+    // Saved transcript preview
+    const tBox = document.getElementById('crmTranscript');
+    if (tBox) tBox.textContent = lead.transcript || 'No messages saved yet.';
+  }
+
+  // ── Update appointments ───────────────────────────────────────────
+  function updateApts(list) {
+    const c = document.getElementById('appointmentsList');
+    const aptStatusEl = document.getElementById('v-apt-status');
+    const aptBoxEl = document.getElementById('f-apt-status');
+
+    if (!list || !list.length) {
+      c.innerHTML = '<span style="color:var(--muted)">No appointments booked yet.</span>';
+      if (aptStatusEl) {
+        aptStatusEl.textContent = 'Not booked';
+        aptStatusEl.className = 'val empty';
+      }
+      if (aptBoxEl) aptBoxEl.classList.remove('filled');
+      return;
+    }
+
+    const latest = list[0];
+    if (aptStatusEl) {
+      aptStatusEl.textContent = `Booked: ${latest.slot}`;
+      aptStatusEl.className = 'val';
+    }
+    if (aptBoxEl) aptBoxEl.classList.add('filled');
+
+    c.innerHTML = list.map(a => `
+      <div class="apt-item">
+        <div>
+          <div class="apt-slot">${esc(a.slot)}</div>
+          <div class="apt-lead">${esc(a.lead_name||'Prospect')} • ${esc(a.lead_email||'No email')}</div>
+        </div>
+        <span style="color:var(--success);font-weight:600">✓ Booked</span>
+      </div>
+    `).join('');
+  }
+
+  // ── Reset ─────────────────────────────────────────────────────────
+  async function resetDemo() {
+    if (!confirm('Reset conversation and CRM data?')) return;
+    await fetch('/api/reset', {method:'POST'}).catch(()=>{});
+    location.reload();
+  }
+
+  // ── Initial CRM load ──────────────────────────────────────────────
+  async function loadCRM() {
+    try {
+      const r = await fetch('/api/crm');
+      const d = await r.json();
+      const sent = (d.lead && d.lead.sentiment) ? d.lead.sentiment : 'neutral';
+      updateBadges(d.gemini_active ? 'gemini_ai' : 'offline_fallback', sent, null);
+      if (d.lead)         updateCRM(d.lead);
+      if (d.appointments) updateApts(d.appointments);
+    } catch(e) { console.warn(e); }
+  }
+
+  window.addEventListener('DOMContentLoaded', loadCRM);
+</script>
+</body>
+</html>

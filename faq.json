@@ -1,0 +1,50 @@
+[
+  {
+    "id": "pricing",
+    "question": "What does FortiVex cost?",
+    "keywords": ["price", "cost", "pricing", "how much", "rate", "plan", "tier", "subscription", "fee", "charge"],
+    "answer": "FortiVex has three plans. Starter is $49 per month and covers up to 500 calls. Professional is $149 per month with unlimited calls and CRM sync. Enterprise is custom-priced and includes a dedicated SLA, onboarding support, and advanced analytics."
+  },
+  {
+    "id": "features",
+    "question": "What does FortiVex do?",
+    "keywords": ["what is fortivex", "what does it do", "feature", "capability", "product", "overview", "how does it work", "what can", "tell me about"],
+    "answer": "FortiVex is an Autonomous AI Sales Voice Agent. It answers inbound prospect calls 24/7, qualifies leads by asking about their needs and budget, answers common product questions from your FAQ library, and books demo appointments automatically — all without a human sales rep on the line."
+  },
+  {
+    "id": "integrations",
+    "question": "What systems does FortiVex integrate with?",
+    "keywords": ["integrat", "hubspot", "salesforce", "crm", "calendar", "outlook", "google calendar", "webhook", "zapier", "connect", "plugin"],
+    "answer": "FortiVex integrates out-of-the-box with HubSpot, Salesforce, Zoho CRM, Google Calendar, and Outlook Calendar. It also supports custom webhooks and a Zapier connector, so it can push qualified lead data into almost any tool you already use."
+  },
+  {
+    "id": "security",
+    "question": "Is FortiVex secure and compliant?",
+    "keywords": ["security", "secure", "safe", "privacy", "gdpr", "soc2", "compliance", "encrypt", "data protection", "hipaa"],
+    "answer": "Yes. All voice and text data is encrypted in transit using TLS 1.3 and at rest using AES-256. FortiVex is SOC 2 Type II certified and GDPR-compliant. We do not store raw audio after transcription, and all data is retained in EU or US regions based on your preference."
+  },
+  {
+    "id": "setup",
+    "question": "How long does it take to set up FortiVex?",
+    "keywords": ["setup", "set up", "install", "onboard", "how long", "deploy", "get started", "start", "implementation", "configure"],
+    "answer": "Setup takes about 15 minutes. You paste in your product FAQ, connect a calendar link, and optionally link your CRM. There is no code required. The agent goes live immediately after setup and you can refine its behaviour from the dashboard at any time."
+  },
+  {
+    "id": "trial",
+    "question": "Is there a free trial?",
+    "keywords": ["trial", "free", "demo", "try", "test", "pilot", "try it", "evaluation", "proof of concept"],
+    "answer": "Yes, FortiVex offers a 14-day free trial on the Professional plan with no credit card required. You can run up to 100 live calls during the trial period, and all qualified lead data is yours to keep after the trial ends."
+  },
+  {
+    "id": "support",
+    "question": "What support options are available?",
+    "keywords": ["support", "help", "customer service", "ticket", "contact", "live chat", "account manager", "sla", "response time"],
+    "answer": "Starter plan includes email support with a 24-hour response time. Professional plan adds live chat support during business hours. Enterprise customers receive a dedicated account manager, a 1-hour SLA for critical issues, and 24/7 phone support."
+  },
+  {
+    "id": "languages",
+    "question": "What languages does FortiVex support?",
+    "keywords": ["language", "multilingual", "spanish", "french", "german", "hindi", "translate", "locale", "accent", "international"],
+    "answer": "FortiVex currently supports English, Spanish, French, and German for voice interactions. Additional languages are on the roadmap and can be enabled in beta on request. All dashboard text is in English."
+  }
+]
