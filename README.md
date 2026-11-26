@@ -13,35 +13,8 @@ A simple, beginner-friendly Autonomous AI Sales Voice Agent built with **FastAPI
 
 ---
 
-## Setup & Run Instructions (PowerShell)
 
-### 1. Create and Activate Virtual Environment
-```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-```
-*(If PowerShell blocks script activation, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` once.)*
 
-### 2. Install Dependencies
-```powershell
-pip install -r requirements.txt
-```
-
-### 3. (Optional) Configure Groq API Key
-```powershell
-Copy-Item .env.example .env
-```
-Open `.env` and set `GROQ_API_KEY=your_key_here`. If left blank, the app runs offline using the built-in rule-based fallback.
-
-### 4. Start the App
-```powershell
-python -m uvicorn main:app --reload --port 8000
-```
-Open **http://localhost:8000** in Chrome or Edge (health check: **http://localhost:8000/health**).
-
----
-
-## 5-Minute Presentation Demo Script
 
 1. **Show the Status Badges**: Point out the **Offline Fallback** (or **Groq AI**) badge in the top bar and the **English / Hindi** language selector.
 2. **Test Voice or Text Input**:
