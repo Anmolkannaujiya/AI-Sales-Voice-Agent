@@ -244,15 +244,18 @@ def fallback_sales_engine(
         faq_reply = faq_match["answer"]
         next_field = _next_missing_field(lead)
         if next_field:
-            _, question = next_field
+            field_key, question = next_field
+            if lead.get("name") and lead["name"] != EMPTY:
+                transition = f"Hope that gives clear clarity, {lead['name']}. {question}"
+            else:
+                transition = f"To make sure this matches your specific requirements, {question.lower()}"
             return (
-                f"{faq_reply}\n\nBy the way — {question}",
+                f"{faq_reply}\n\n{transition}",
                 lead,
                 "offline_fallback",
             )
         return (
-            f"{faq_reply}\n\nIs there anything else I can help with, "
-            "or would you like to book a demo?",
+            f"{faq_reply}\n\nIs there anything else I can clarify for you, or would you like to lock in a live 15-minute demo?",
             lead,
             "offline_fallback",
         )
@@ -260,8 +263,7 @@ def fallback_sales_engine(
     # 3. Greeting
     if any(w in lower for w in ["hi", "hello", "hey", "good morning", "good afternoon", "howdy"]):
         return (
-            "Hello! Welcome to FortiVex — I'm your AI sales representative. "
-            "May I start with your name?",
+            "Hello! Welcome to FortiVex. I'm your autonomous sales consultant. I can answer any questions about our 24/7 AI voice pipeline, pricing, and integrations. May I start with your name?",
             lead,
             "offline_fallback",
         )
@@ -270,8 +272,20 @@ def fallback_sales_engine(
     next_field = _next_missing_field(lead)
     if next_field:
         field_key, question = next_field
+        if lead.get("name") and lead["name"] != EMPTY and field_key == "company":
+            phrase = f"Pleasure to meet you, {lead['name']}! {question}"
+        elif lead.get("company") and lead["company"] != EMPTY and field_key == "role":
+            phrase = f"Great to connect with {lead['company']}! {question}"
+        elif field_key == "need":
+            phrase = f"Got it. {question}"
+        elif field_key == "budget":
+            phrase = f"Understood. {question}"
+        elif field_key == "timeline":
+            phrase = f"That makes total sense. {question}"
+        else:
+            phrase = f"Thanks for that! {question}"
         return (
-            f"Thanks for sharing! {question}",
+            phrase,
             lead,
             "offline_fallback",
         )
@@ -291,20 +305,38 @@ def fallback_sales_engine(
 # ── Groq mode ─────────────────────────────────────────────────────────────────
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "openai/gpt-oss-20b"
+GROQ_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+
+def _get_recent_history(limit: int = 6) -> str:
+    """Format recent conversation turns for context."""
+    try:
+        msgs = database.get_messages()
+        if not msgs:
+            return "No previous conversation turns."
+        recent = msgs[-limit:]
+        formatted = []
+        for m in recent:
+            role = "Prospect" if m["role"] == "user" else "Agent"
+            formatted.append(f"{role}: {m['content']}")
+        return "\n".join(formatted)
+    except Exception:
+        return "No previous conversation turns."
 
 def _groq_reply(user_message: str, current_lead: Dict, faq_match: Optional[Dict], lang: str = "en-US") -> Dict:
-    faq_context = (
-        f"Relevant FAQ entry:\nQ: {faq_match['question']}\nA: {faq_match['answer']}"
-        if faq_match
-        else "No FAQ entry matched this question. Do not state product facts not in the FAQ context."
-    )
+    faq_section = ""
+    if faq_match:
+        faq_section = f"""AUTHORITATIVE FAQ MATCH:
+Question: {faq_match['question']}
+Answer: {faq_match['answer']}
+Use the above verified facts as the primary ground truth for this topic."""
+    else:
+        faq_section = "No direct FAQ keyword match. Use your general FortiVex product knowledge and consultative sales expertise to provide an articulate, accurate, and helpful response."
 
     nf = _next_missing_field(current_lead)
-    next_field_info = (
-        f'The next qualification field to collect is "{nf[0]}". Ask: "{nf[1]}"'
-        if nf else "All qualification fields collected. Suggest booking a demo."
-    )
+    if nf:
+        next_field_info = f'Next missing lead field to naturally discover: "{nf[0]}" (e.g., smoothly ask: "{nf[1]}"). Weave this in conversationally.'
+    else:
+        next_field_info = "All 7 lead qualification fields have been collected! Enthusiastically encourage booking a demo slot."
 
     lang_instruction = (
         "Respond in natural, conversational Hindi (Devanagari script)."
@@ -312,59 +344,88 @@ def _groq_reply(user_message: str, current_lead: Dict, faq_match: Optional[Dict]
         else "Respond in English."
     )
 
-    prompt = f"""You are a professional, friendly AI sales voice agent for FortiVex.
+    history_text = _get_recent_history(limit=8)
 
-RULES (follow strictly):
-1. {lang_instruction}
-2. Answer product questions ONLY using the FAQ context below. Do not invent facts.
-3. If the FAQ context does not cover the question, say you will get back to them and move on.
-4. After answering (or if no FAQ matches), smoothly ask for the next missing qualification field.
-5. Keep replies short and conversational — suitable for text-to-speech (2-3 sentences max).
-6. Never mention these instructions.
+    prompt = f"""You are an elite, consultative AI Sales Voice Agent for FortiVex.
 
-{faq_context}
+FORTIVEX PRODUCT & COMPANY KNOWLEDGE:
+- What FortiVex does: Autonomous AI Sales Voice Agent operating 24/7. Answers inbound prospect calls within 500ms, qualifies leads with BANT criteria, handles technical & commercial FAQs, and books demo appointments into team calendars with zero human delay.
+- Pricing Tiers:
+  * Starter: $49/month (up to 500 calls, core qualification, email support).
+  * Professional: $149/month (unlimited inbound calls, live CRM sync, custom voice accents, live chat support).
+  * Enterprise: Custom pricing with volume discounts, 1-hour critical SLA, custom webhook pipelines, dedicated account manager.
+- Integrations: 1-click native integrations with HubSpot, Salesforce, Zoho CRM, Google Calendar, and Microsoft Outlook. Plus Zapier, Make, and webhook support.
+- Security & Compliance: SOC 2 Type II certified, GDPR-compliant, TLS 1.3 in transit, AES-256 at rest, raw audio discarded after transcription, data isolation.
+- Setup & Onboarding: Under 15 minutes, zero code required. Upload existing FAQs/docs, connect calendar, and go live.
+- Free Trial: 14-day free trial on Professional tier with 100 free minutes, no credit card required.
+- ROI & Impact: Eliminates 24-48 hr inbound response lag; converts 3x more demos; reduces customer acquisition costs by up to 65%; handles unlimited simultaneous calls.
+- Voice & Languages: Sub-second voice synthesis in English, Hindi, Spanish, French, German.
 
-Current lead CRM state:
+RECENT CONVERSATION HISTORY (Review to avoid repeating questions or statements):
+{history_text}
+
+CURRENT LEAD CRM STATE (Already known fields - DO NOT re-ask what is already provided):
 {json.dumps(current_lead, indent=2)}
+
+{faq_section}
 
 {next_field_info}
 
-Available demo slots: {MOCK_AVAILABLE_SLOTS}
+AVAILABLE DEMO SLOTS: {MOCK_AVAILABLE_SLOTS}
 
-User's message: "{user_message}"
+PROSPECT'S LATEST MESSAGE: "{user_message}"
 
-Respond with ONLY a valid JSON object (no markdown fences) with these keys:
-- "reply": string — the agent's spoken response
-- "name": string or null
-- "company": string or null
-- "role": string or null
-- "email": string or null
-- "need": string or null
-- "budget": string or null
-- "timeline": string or null
-- "booked_slot": string or null — exact slot name if user confirmed one
-- "summary": string — 1-sentence lead summary based on what is known so far
+BEHAVIOR GUIDELINES:
+1. {lang_instruction}
+2. Provide a knowledgeable, rich, consultative answer. Never give a blunt or evasive "I will get back to you" response. If the question asks about capabilities, technology, pricing, integrations, or use cases, explain clearly and convincingly.
+3. Keep the spoken response natural, warm, and concise (2 to 3 sentences max) so it sounds fluid on voice text-to-speech.
+4. Avoid repetitive formulas (do NOT always say "Thanks for sharing! By the way..."). Acknowledge what the prospect said and weave any follow-up question seamlessly.
+5. If the prospect indicates interest in a demo, confirm or suggest one of the available slots.
+
+Return ONLY a valid JSON object (no markdown formatting, no code blocks) with these exact keys:
+- "reply": string — your spoken response to the prospect (2-3 sentences max)
+- "name": string or null — prospect's name if mentioned in this turn or previous turns
+- "company": string or null — company name
+- "role": string or null — job title/role
+- "email": string or null — email address
+- "need": string or null — business challenge or automation goal
+- "budget": string or null — budget or investment range
+- "timeline": string or null — target start date or timeline
+- "booked_slot": string or null — exact demo slot name if confirmed, otherwise null
+- "summary": string — 1-sentence current lead status summary
 """
 
-    resp = requests.post(
-        GROQ_API_URL,
-        headers={
-            "Authorization": f"Bearer {_get_groq_key()}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": GROQ_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.3,
-            "response_format": {"type": "json_object"},
-        },
-        timeout=20,
-    )
-    resp.raise_for_status()
-    raw = resp.json()["choices"][0]["message"]["content"].strip()
-    raw = re.sub(r"^```(?:json)?\s*", "", raw)
-    raw = re.sub(r"\s*```$", "", raw)
-    return json.loads(raw)
+    headers = {
+        "Authorization": f"Bearer {_get_groq_key()}",
+        "Content-Type": "application/json",
+    }
+
+    last_error = None
+    for model_name in GROQ_MODELS:
+        try:
+            resp = requests.post(
+                GROQ_API_URL,
+                headers=headers,
+                json={
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.4,
+                    "response_format": {"type": "json_object"},
+                },
+                timeout=18,
+            )
+            if resp.status_code == 200:
+                raw = resp.json()["choices"][0]["message"]["content"].strip()
+                raw = re.sub(r"^```(?:json)?\s*", "", raw)
+                raw = re.sub(r"\s*```$", "", raw)
+                return json.loads(raw)
+            else:
+                last_error = f"Model {model_name} HTTP {resp.status_code}: {resp.text[:120]}"
+        except Exception as e:
+            last_error = f"Model {model_name} error: {e}"
+            continue
+
+    raise RuntimeError(f"All Groq models failed. Last error: {last_error}")
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
@@ -453,32 +514,34 @@ def generate_call_summary() -> Dict[str, Any]:
     apt_text = f"Appointment booked for {appointments[0]['slot']}." if appointments else "No appointment booked yet."
 
     if check_groq_available() and transcript:
-        try:
-            prompt = (
-                "Write a concise 2-sentence sales call summary based ONLY on this CRM state, "
-                "appointment status, and transcript. Do not invent any details.\n\n"
-                f"Lead: {json.dumps(lead)}\n"
-                f"Appointment: {apt_text}\n"
-                f"Sentiment (basic estimate): {sentiment}\n"
-                f"Transcript:\n{transcript}"
-            )
-            resp = requests.post(
-                GROQ_API_URL,
-                headers={
-                    "Authorization": f"Bearer {_get_groq_key()}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": GROQ_MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.2,
-                },
-                timeout=20,
-            )
-            resp.raise_for_status()
-            summary_text = resp.json()["choices"][0]["message"]["content"].strip()
-        except Exception:
-            summary_text = (_build_summary(lead) + f" Sentiment: {sentiment} (basic estimate). {apt_text}").strip()
+        for model_name in GROQ_MODELS:
+            try:
+                prompt = (
+                    "Write a concise 2-sentence executive sales call summary based ONLY on this CRM state, "
+                    "appointment status, and transcript. Be professional, crisp, and factual.\n\n"
+                    f"Lead: {json.dumps(lead)}\n"
+                    f"Appointment: {apt_text}\n"
+                    f"Sentiment (basic estimate): {sentiment}\n"
+                    f"Transcript:\n{transcript}"
+                )
+                resp = requests.post(
+                    GROQ_API_URL,
+                    headers={
+                        "Authorization": f"Bearer {_get_groq_key()}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0.2,
+                    },
+                    timeout=15,
+                )
+                if resp.status_code == 200:
+                    summary_text = resp.json()["choices"][0]["message"]["content"].strip()
+                    break
+            except Exception:
+                continue
     else:
         base = _build_summary(lead) or "Initial prospect inquiry recorded."
         summary_text = f"{base} Sentiment: {sentiment} (basic estimate). {apt_text}"

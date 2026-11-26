@@ -3,48 +3,72 @@
     "id": "pricing",
     "question": "What does FortiVex cost?",
     "keywords": ["price", "cost", "pricing", "how much", "rate", "plan", "tier", "subscription", "fee", "charge"],
-    "answer": "FortiVex has three plans. Starter is $49 per month and covers up to 500 calls. Professional is $149 per month with unlimited calls and CRM sync. Enterprise is custom-priced and includes a dedicated SLA, onboarding support, and advanced analytics."
+    "answer": "FortiVex offers three flexible tiers: Starter at $49/month (covers up to 500 calls with core qualification), Professional at $149/month (unlimited inbound calls, real-time CRM sync, custom voices), and Enterprise with volume discounts, dedicated SLA, custom webhook pipelines, and dedicated onboarding."
   },
   {
     "id": "features",
-    "question": "What does FortiVex do?",
-    "keywords": ["what is fortivex", "what does it do", "feature", "capability", "product", "overview", "how does it work", "what can", "tell me about"],
-    "answer": "FortiVex is an Autonomous AI Sales Voice Agent. It answers inbound prospect calls 24/7, qualifies leads by asking about their needs and budget, answers common product questions from your FAQ library, and books demo appointments automatically — all without a human sales rep on the line."
+    "question": "What does FortiVex do and what are its key features?",
+    "keywords": ["what is fortivex", "what does it do", "feature", "capability", "capabilities", "product", "overview", "how does it work", "what can", "tell me about"],
+    "answer": "FortiVex is an Autonomous AI Sales Voice Agent that operates 24/7. It instantly answers inbound prospect calls with sub-second latency, qualifies prospects using BANT criteria, answers complex product questions from your knowledge base, and books live demo appointments directly into your team's calendar without human lag."
+  },
+  {
+    "id": "how_it_works",
+    "question": "How does FortiVex work technically?",
+    "keywords": ["how does it work", "technology", "tech stack", "architecture", "under the hood", "how it works", "latency", "real time"],
+    "answer": "FortiVex combines ultra-low latency browser/telephony speech recognition (STT), high-speed LLM reasoning, and natural neural voice synthesis (TTS). Calls are processed in real time under 500 milliseconds, allowing smooth, human-like voice conversations with automatic CRM transcription."
+  },
+  {
+    "id": "roi_benefits",
+    "question": "What is the ROI and business benefit of FortiVex?",
+    "keywords": ["roi", "benefit", "value", "why choose", "advantage", "conversion", "sales boost", "result"],
+    "answer": "Companies using FortiVex see an average 3x increase in booked demos and a 65% reduction in customer acquisition cost. By eliminating the 24-to-48 hour inbound wait time and engaging leads within seconds 24/7, you never lose high-intent prospects to competitors."
+  },
+  {
+    "id": "comparison",
+    "question": "How does FortiVex compare to human SDRs or traditional phone trees?",
+    "keywords": ["compare", "comparison", "human", "sdr", "representative", "phone tree", "ivr", "vs"],
+    "answer": "Unlike traditional IVRs that frustrate callers with numeric menus, FortiVex holds fluid, intelligent conversations. Compared to human SDRs, FortiVex handles unlimited concurrent calls 24/7 with zero wait time, never forgets qualification questions, and costs over 90% less while seamlessly handing off warm leads."
   },
   {
     "id": "integrations",
     "question": "What systems does FortiVex integrate with?",
-    "keywords": ["integrat", "hubspot", "salesforce", "crm", "calendar", "outlook", "google calendar", "webhook", "zapier", "connect", "plugin"],
-    "answer": "FortiVex integrates out-of-the-box with HubSpot, Salesforce, Zoho CRM, Google Calendar, and Outlook Calendar. It also supports custom webhooks and a Zapier connector, so it can push qualified lead data into almost any tool you already use."
+    "keywords": ["integrat", "hubspot", "salesforce", "crm", "calendar", "outlook", "google calendar", "webhook", "zapier", "connect", "plugin", "zoho"],
+    "answer": "FortiVex provides native, 1-click integrations with HubSpot, Salesforce, Zoho CRM, Google Calendar, and Microsoft Outlook. It also supports Zapier, Make, and secure JSON REST webhooks to push lead qualification notes and transcripts to any internal database."
   },
   {
     "id": "security",
     "question": "Is FortiVex secure and compliant?",
     "keywords": ["security", "secure", "safe", "privacy", "gdpr", "soc2", "compliance", "encrypt", "data protection", "hipaa"],
-    "answer": "Yes. All voice and text data is encrypted in transit using TLS 1.3 and at rest using AES-256. FortiVex is SOC 2 Type II certified and GDPR-compliant. We do not store raw audio after transcription, and all data is retained in EU or US regions based on your preference."
+    "answer": "Yes. FortiVex is SOC 2 Type II compliant and GDPR-ready. All voice streams and conversation transcripts are protected with TLS 1.3 encryption in transit and AES-256 at rest. Raw audio is discarded after transcription, and customer data is strictly isolated."
   },
   {
     "id": "setup",
     "question": "How long does it take to set up FortiVex?",
     "keywords": ["setup", "set up", "install", "onboard", "how long", "deploy", "get started", "start", "implementation", "configure"],
-    "answer": "Setup takes about 15 minutes. You paste in your product FAQ, connect a calendar link, and optionally link your CRM. There is no code required. The agent goes live immediately after setup and you can refine its behaviour from the dashboard at any time."
+    "answer": "Setup takes under 15 minutes. You simply paste your existing product FAQ or website URL, connect your Google or Outlook calendar, and your voice agent is ready to take calls. No coding or complex telephony configuration required."
   },
   {
     "id": "trial",
     "question": "Is there a free trial?",
     "keywords": ["trial", "free", "demo", "try", "test", "pilot", "try it", "evaluation", "proof of concept"],
-    "answer": "Yes, FortiVex offers a 14-day free trial on the Professional plan with no credit card required. You can run up to 100 live calls during the trial period, and all qualified lead data is yours to keep after the trial ends."
+    "answer": "Yes, we offer a 14-day free trial on the Professional tier with no credit card required. You get 100 free live minutes to test voice qualification and demo booking in your own environment."
   },
   {
-    "id": "support",
-    "question": "What support options are available?",
-    "keywords": ["support", "help", "customer service", "ticket", "contact", "live chat", "account manager", "sla", "response time"],
-    "answer": "Starter plan includes email support with a 24-hour response time. Professional plan adds live chat support during business hours. Enterprise customers receive a dedicated account manager, a 1-hour SLA for critical issues, and 24/7 phone support."
+    "id": "customization",
+    "question": "Can I customize the agent's voice, accent, and qualification questions?",
+    "keywords": ["customize", "customization", "voice", "accent", "tone", "script", "questions", "prompt", "persona"],
+    "answer": "Absolutely. You can choose from dozens of realistic natural voice personas and accents, customize the qualification criteria (budget thresholds, target industries, timelines), and fine-tune the agent's tone from energetic to corporate professional."
   },
   {
     "id": "languages",
     "question": "What languages does FortiVex support?",
     "keywords": ["language", "multilingual", "spanish", "french", "german", "hindi", "translate", "locale", "accent", "international"],
-    "answer": "FortiVex currently supports English, Spanish, French, and German for voice interactions. Additional languages are on the roadmap and can be enabled in beta on request. All dashboard text is in English."
+    "answer": "FortiVex natively supports English, Hindi, Spanish, French, and German for conversational voice interactions. It automatically adapts to the prospect's selected language in real time."
+  },
+  {
+    "id": "support",
+    "question": "What support options are available?",
+    "keywords": ["support", "help", "customer service", "ticket", "contact", "live chat", "account manager", "sla", "response time"],
+    "answer": "Starter includes 24/7 email support with response under 24 hours. Professional adds live chat and onboarding assistance. Enterprise clients receive a dedicated Slack channel, designated account manager, and guaranteed 1-hour critical SLA."
   }
 ]
